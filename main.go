@@ -22,8 +22,10 @@ type unifiClient struct {
 func main() {
 
 	var endpoint, username, clientFile, mfatoken, password string
+	var initialSetup bool
 	flag.StringVar(&endpoint, "endpoint", "https://192.168.1.1", "Controller endpoint")
 	flag.StringVar(&clientFile, "clientFile", "clients.txt", "path to the file of clients")
+	flag.BoolVar(&initialSetup, "initialSetup", false, "use for initial setup")
 	flag.Parse()
 
 	fmt.Printf("Enter your Unifi username: ")
@@ -84,9 +86,11 @@ func main() {
 			continue
 		}
 
-		err = unifi.updateHomeClient(hc)
-		if err != nil {
-			log.Fatalf("got error configuring client: %v", err)
+		if initialSetup {
+			err = unifi.initialClientSetup(hc)
+			if err != nil {
+				log.Fatalf("got error configuring client: %v", err)
+			}
 		}
 
 	}
