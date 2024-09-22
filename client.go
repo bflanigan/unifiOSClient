@@ -86,7 +86,7 @@ type siteid []struct {
 	WiredRateMbps                       int     `json:"wired_rate_mbps,omitempty"`
 }
 
-func newClient(endpoint, username, password, apikey string) (*unifiClient, error) {
+func newClient(endpoint, username, password string) (*unifiClient, error) {
 
 	u := &unifiClient{}
 
