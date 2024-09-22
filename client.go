@@ -22,8 +22,10 @@ type unifiClient struct {
 }
 
 type activeClient struct {
-	ID  string
-	MAC string
+	ID          string
+	MAC         string
+	DisplayName string
+	HostName    string
 }
 
 type login struct {
@@ -58,7 +60,7 @@ type removeClient struct {
 	Name string
 }
 
-type clients []struct {
+type unifiHomeClient []struct {
 	Anomalies   int    `json:"anomalies,omitempty"`
 	AssocTime   int    `json:"assoc_time,omitempty"`
 	Blocked     bool   `json:"blocked,omitempty"`
@@ -173,6 +175,52 @@ func newClient(endpoint, username, password, mfatoken string) (*unifiClient, err
 
 }
 
+func (u *unifiClient) getActiveClients() error {
+
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/proxy/network/v2/api/site/default/clients/active", u.endpoint), nil)
+	if err != nil {
+		return fmt.Errorf("failed to construct active client list request: %v", err)
+	}
+	u.decorateRequest(req, false)
+
+	resp, err := u.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("got error making active client list: %v", err)
+	}
+	defer resp.Body.Close()
+
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != 200 {
+		log.Printf("Response body: %v", string(b))
+		return fmt.Errorf("did not get HTTP 200 updating client")
+	}
+
+	var clients unifiHomeClient
+
+	err = json.Unmarshal(b, &clients)
+	if err != nil {
+		return err
+	}
+
+	for _, c := range clients {
+		a := activeClient{
+			MAC:         c.Mac,
+			ID:          c.UserID,
+			DisplayName: c.DisplayName,
+			HostName:    c.Hostname,
+		}
+		u.activeClients[c.DisplayName] = a
+		log.Printf("DisplayName %q HostName: %q MAC: %s and ID: %s", c.DisplayName, c.Hostname, c.Mac, c.UserID)
+	}
+	fmt.Println()
+
+	return nil
+}
+
 func (u *unifiClient) decorateRequest(req *http.Request, omitCSRFToken bool) {
 	req.Header.Add("content-type", "application/json")
 	req.Header.Add("accept", "*/*")
@@ -220,48 +268,6 @@ func (u *unifiClient) initialClientSetup(h *initialHomeClient) error {
 	return nil
 }
 
-func (u *unifiClient) getActiveClients() error {
-
-	req, err := http.NewRequest("GET", fmt.Sprintf("%s/proxy/network/v2/api/site/default/clients/active", u.endpoint), nil)
-	if err != nil {
-		return fmt.Errorf("failed to construct active client list request: %v", err)
-	}
-	u.decorateRequest(req, false)
-
-	resp, err := u.client.Do(req)
-	if err != nil {
-		return fmt.Errorf("got error making active client list: %v", err)
-	}
-	defer resp.Body.Close()
-
-	b, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return err
-	}
-
-	if resp.StatusCode != 200 {
-		log.Printf("Response body: %v", string(b))
-		return fmt.Errorf("did not get HTTP 200 updating client")
-	}
-
-	var activeClients clients
-
-	err = json.Unmarshal(b, &activeClients)
-	if err != nil {
-		return err
-	}
-
-	for _, c := range activeClients {
-		a := activeClient{
-			MAC: c.Mac,
-			ID:  c.UserID,
-		}
-		u.activeClients[c.Mac] = a
-	}
-
-	return nil
-}
-
 func (u *unifiClient) refreshClient(h *refreshClient) error {
 
 	log.Printf("Refreshing home client: %s\n", h.Name)
@@ -270,7 +276,12 @@ func (u *unifiClient) refreshClient(h *refreshClient) error {
 		return err
 	}
 
-	req, err := http.NewRequest("PUT", fmt.Sprintf("%s/proxy/network/api/s/default/rest/user/%s", u.endpoint, u.userID), bytes.NewReader(b))
+	info, ok := u.activeClients[h.Name]
+	if !ok {
+		return fmt.Errorf("did not find %s in active client list", h.Name)
+	}
+
+	req, err := http.NewRequest("PUT", fmt.Sprintf("%s/proxy/network/api/s/default/rest/user/%s", u.endpoint, info.ID), bytes.NewReader(b))
 	if err != nil {
 		return fmt.Errorf("failed to construct client refresh request: %v", err)
 	}
@@ -326,4 +337,10 @@ func (u *unifiClient) removeClient(h *removeClient) error {
 	}
 
 	return nil
+}
+
+func (u *unifiClient) isActiveClient(mac string) bool {
+	// check if the client is in the list of active clients
+	_, ok := u.activeClients[mac]
+	return ok
 }

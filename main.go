@@ -40,6 +40,7 @@ func main() {
 		log.Fatalf("failed to construct unifi client: %v", err)
 	}
 
+	log.Printf("Refreshing current list of active clients")
 	err = unifi.getActiveClients()
 	if err != nil {
 		log.Fatalln(err)
@@ -85,7 +86,13 @@ func main() {
 				log.Fatalf("got error configuring client: %v", err)
 			}
 		} else {
-			//refreshing clients
+
+			present := unifi.isActiveClient(strings.TrimSpace(fields[1]))
+			if !present {
+				log.Printf("Skipping update for %s - not an active client", strings.TrimSpace(fields[0]))
+				continue
+			}
+
 			var macSlice []string
 			macSlice = append(macSlice, strings.TrimSpace(fields[1]))
 
