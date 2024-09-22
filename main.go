@@ -40,7 +40,7 @@ func main() {
 		log.Fatalf("failed to construct unifi client: %v", err)
 	}
 
-	err = unifi.getSiteID()
+	err = unifi.getActiveClients()
 	if err != nil {
 		log.Fatalln(err)
 	}

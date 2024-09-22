@@ -16,8 +16,14 @@ import (
 type unifiClient struct {
 	client    *http.Client
 	csrfToken string
-	userID    string
 	endpoint  string
+
+	activeClients map[string]activeClient
+}
+
+type activeClient struct {
+	ID  string
+	MAC string
 }
 
 type login struct {
@@ -52,7 +58,7 @@ type removeClient struct {
 	Name string
 }
 
-type siteid []struct {
+type clients []struct {
 	Anomalies   int    `json:"anomalies,omitempty"`
 	AssocTime   int    `json:"assoc_time,omitempty"`
 	Blocked     bool   `json:"blocked,omitempty"`
@@ -159,9 +165,10 @@ func newClient(endpoint, username, password, mfatoken string) (*unifiClient, err
 	}
 
 	return &unifiClient{
-		client:    client,
-		csrfToken: csrfToken,
-		endpoint:  endpoint,
+		client:        client,
+		csrfToken:     csrfToken,
+		endpoint:      endpoint,
+		activeClients: make(map[string]activeClient),
 	}, nil
 
 }
@@ -213,17 +220,17 @@ func (u *unifiClient) initialClientSetup(h *initialHomeClient) error {
 	return nil
 }
 
-func (u *unifiClient) getSiteID() error {
+func (u *unifiClient) getActiveClients() error {
 
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/proxy/network/v2/api/site/default/clients/active", u.endpoint), nil)
 	if err != nil {
-		return fmt.Errorf("failed to construct client update request: %v", err)
+		return fmt.Errorf("failed to construct active client list request: %v", err)
 	}
 	u.decorateRequest(req, false)
 
 	resp, err := u.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("got error updating client: %v", err)
+		return fmt.Errorf("got error making active client list: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -237,22 +244,22 @@ func (u *unifiClient) getSiteID() error {
 		return fmt.Errorf("did not get HTTP 200 updating client")
 	}
 
-	var si siteid
+	var activeClients clients
 
-	err = json.Unmarshal(b, &si)
+	err = json.Unmarshal(b, &activeClients)
 	if err != nil {
 		return err
 	}
 
-	for _, s := range si {
-		if s.SiteID != "" {
-			log.Printf("Found user_id value of: %s\n", s.UserID)
-			u.userID = s.UserID
-			return nil
+	for _, c := range activeClients {
+		a := activeClient{
+			MAC: c.Mac,
+			ID:  c.UserID,
 		}
+		u.activeClients[c.Mac] = a
 	}
 
-	return fmt.Errorf("failed to find user_id value")
+	return nil
 }
 
 func (u *unifiClient) refreshClient(h *refreshClient) error {
