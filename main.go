@@ -86,6 +86,20 @@ func main() {
 			}
 		} else {
 			//refreshing clients
+			var macSlice []string
+			macSlice = append(macSlice, strings.TrimSpace(fields[1]))
+
+			removeC := &removeClient{
+				Cmd:  "forget-sta",
+				Macs: macSlice,
+				Name: strings.TrimSpace(fields[0]),
+			}
+
+			err = unifi.removeClient(removeC)
+			if err != nil {
+				log.Fatalf("got error removing client: %v", err)
+			}
+
 			rc := &refreshClient{
 				Name:       strings.TrimSpace(fields[0]),
 				FixedIP:    strings.TrimSpace(fields[2]),
