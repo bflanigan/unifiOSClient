@@ -151,7 +151,7 @@ func (u *unifiClient) decorateRequest(req *http.Request, omitCSRFToken bool) {
 	}
 }
 
-func (u *unifiClient) updateHomeClient(h *homeClient) error {
+func (u *unifiClient) initialClientSetup(h *homeClient) error {
 
 	log.Printf("Configuring home client: %s\n", h.Name)
 	b, err := json.Marshal(h)
