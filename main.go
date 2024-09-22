@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"os"
 	"strings"
+
+	"golang.org/x/term"
 )
 
 type unifiClient struct {
@@ -19,18 +21,25 @@ type unifiClient struct {
 
 func main() {
 
-	password, ok := os.LookupEnv("UNIFIPASS")
-	if !ok {
-		log.Fatalf("You must set the password for the network controller with the UNIFIPASS env var")
-	}
-
-	var endpoint, username, clientFile, mfatoken string
+	var endpoint, username, clientFile, mfatoken, password string
 	flag.StringVar(&endpoint, "endpoint", "https://192.168.1.1", "Controller endpoint")
-	flag.StringVar(&username, "username", "admin", "password for the admin user")
 	flag.StringVar(&clientFile, "clientFile", "clients.txt", "path to the file of clients")
 	flag.Parse()
 
-	fmt.Scanf("Enter the MFA token: ", &mfatoken)
+	fmt.Printf("Enter your Unifi username: ")
+	fmt.Scan(&username)
+
+	fmt.Printf("Enter your Unifi password: ")
+	b, err := term.ReadPassword(0)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	password = string(b)
+	fmt.Println()
+
+	fmt.Printf("Enter the MFA token: ")
+	fmt.Scan(&mfatoken)
+	fmt.Println()
 
 	unifi, err := newClient(endpoint, username, password, mfatoken)
 	if err != nil {
