@@ -86,13 +86,14 @@ type siteid []struct {
 	WiredRateMbps                       int     `json:"wired_rate_mbps,omitempty"`
 }
 
-func newClient(endpoint, username, password string) (*unifiClient, error) {
+func newClient(endpoint, username, password, mfatoken string) (*unifiClient, error) {
 
 	u := &unifiClient{}
 
 	loginPayload := login{
 		Username: username,
 		Password: password,
+		Token:    mfatoken,
 	}
 
 	loginBody, err := json.Marshal(loginPayload)

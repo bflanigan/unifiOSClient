@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"flag"
+	"fmt"
 	"log"
 	"net/http"
 	"os"
@@ -23,13 +24,15 @@ func main() {
 		log.Fatalf("You must set the password for the network controller with the UNIFIPASS env var")
 	}
 
-	var endpoint, username, clientFile string
+	var endpoint, username, clientFile, mfatoken string
 	flag.StringVar(&endpoint, "endpoint", "https://192.168.1.1", "Controller endpoint")
 	flag.StringVar(&username, "username", "admin", "password for the admin user")
 	flag.StringVar(&clientFile, "clientFile", "clients.txt", "path to the file of clients")
 	flag.Parse()
 
-	unifi, err := newClient(endpoint, username, password)
+	fmt.Scanf("Enter the MFA token: ", &mfatoken)
+
+	unifi, err := newClient(endpoint, username, password, mfatoken)
 	if err != nil {
 		log.Fatalf("failed to construct unifi client: %v", err)
 	}
