@@ -13,6 +13,13 @@ import (
 	"time"
 )
 
+type unifiClient struct {
+	client    *http.Client
+	csrfToken string
+	userID    string
+	endpoint  string
+}
+
 type login struct {
 	Username   string `json:"username,omitempty"`
 	Password   string `json:"password,omitempty"`
@@ -20,12 +27,23 @@ type login struct {
 	RememberMe bool   `json:"rememberMe,omitempty"`
 }
 
-type homeClient struct {
+type initialHomeClient struct {
 	Mac                   string `json:"mac"`
 	Name                  string `json:"name"`
 	UseFixedip            bool   `json:"use_fixedip"`
 	LocalDNSRecordEnabled bool   `json:"local_dns_record_enabled"`
 	FixedIP               string `json:"fixed_ip"`
+}
+
+type refreshClient struct {
+	LocalDNSRecordEnabled         bool   `json:"local_dns_record_enabled"`
+	LocalDNSRecord                string `json:"local_dns_record"`
+	Name                          string `json:"name"`
+	VirtualNetworkOverrideEnabled bool   `json:"virtual_network_override_enabled"`
+	VirtualNetworkOverrideID      string `json:"virtual_network_override_id"`
+	UsergroupID                   string `json:"usergroup_id"`
+	UseFixedip                    bool   `json:"use_fixedip"`
+	FixedIP                       string `json:"fixed_ip"`
 }
 
 type siteid []struct {
@@ -151,7 +169,7 @@ func (u *unifiClient) decorateRequest(req *http.Request, omitCSRFToken bool) {
 	}
 }
 
-func (u *unifiClient) initialClientSetup(h *homeClient) error {
+func (u *unifiClient) initialClientSetup(h *initialHomeClient) error {
 
 	log.Printf("Configuring home client: %s\n", h.Name)
 	b, err := json.Marshal(h)
@@ -222,11 +240,44 @@ func (u *unifiClient) getSiteID() error {
 
 	for _, s := range si {
 		if s.SiteID != "" {
-			log.Printf("Found siteid value of: %s\n", s.SiteID)
-			u.siteID = s.SiteID
+			log.Printf("Found user_id value of: %s\n", s.UserID)
+			u.userID = s.UserID
 			return nil
 		}
 	}
 
-	return fmt.Errorf("failed to find siteid value")
+	return fmt.Errorf("failed to find user_id value")
+}
+
+func (u *unifiClient) refreshClient(h *refreshClient) error {
+
+	log.Printf("Refreshing home client: %s\n", h.Name)
+	b, err := json.Marshal(h)
+	if err != nil {
+		return err
+	}
+
+	req, err := http.NewRequest("PUT", fmt.Sprintf("%s/proxy/network/api/s/default/rest/user/%s", u.endpoint, u.userID), bytes.NewReader(b))
+	if err != nil {
+		return fmt.Errorf("failed to construct client refresh request: %v", err)
+	}
+	u.decorateRequest(req, false)
+
+	resp, err := u.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("got error refreshing client: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		bodyResponse, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+
+		log.Printf("Failure response body: %v", string(bodyResponse))
+		return fmt.Errorf("did not get HTTP 200 refreshing client")
+	}
+
+	return nil
 }

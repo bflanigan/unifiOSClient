@@ -5,19 +5,11 @@ import (
 	"flag"
 	"fmt"
 	"log"
-	"net/http"
 	"os"
 	"strings"
 
 	"golang.org/x/term"
 )
-
-type unifiClient struct {
-	client    *http.Client
-	csrfToken string
-	siteID    string
-	endpoint  string
-}
 
 func main() {
 
@@ -28,10 +20,10 @@ func main() {
 	flag.BoolVar(&initialSetup, "initialSetup", false, "use for initial setup")
 	flag.Parse()
 
-	fmt.Printf("Enter your Unifi username: ")
+	fmt.Printf("Enter your Unifi (https://unifi.ui.com/) username: ")
 	fmt.Scan(&username)
 
-	fmt.Printf("Enter your Unifi password: ")
+	fmt.Printf("Enter your Unifi https://unifi.ui.com/) password: ")
 	b, err := term.ReadPassword(0)
 	if err != nil {
 		log.Fatalln(err)
@@ -73,23 +65,36 @@ func main() {
 			continue
 
 		}
-		hc := &homeClient{
-			Name:                  strings.TrimSpace(fields[0]),
-			Mac:                   strings.TrimSpace(fields[1]),
-			FixedIP:               strings.TrimSpace(fields[2]),
-			UseFixedip:            true,
-			LocalDNSRecordEnabled: false,
-		}
 
-		if !strings.Contains(hc.Mac, `:`) {
+		if !strings.Contains(fields[1], `:`) {
 			log.Printf("skipping line %q - appears to be malformed MAC address", s.Text())
 			continue
 		}
 
 		if initialSetup {
+			hc := &initialHomeClient{
+				Name:                  strings.TrimSpace(fields[0]),
+				Mac:                   strings.TrimSpace(fields[1]),
+				FixedIP:               strings.TrimSpace(fields[2]),
+				UseFixedip:            true,
+				LocalDNSRecordEnabled: false,
+			}
+
 			err = unifi.initialClientSetup(hc)
 			if err != nil {
 				log.Fatalf("got error configuring client: %v", err)
+			}
+		} else {
+			//refreshing clients
+			rc := &refreshClient{
+				Name:       strings.TrimSpace(fields[0]),
+				FixedIP:    strings.TrimSpace(fields[2]),
+				UseFixedip: true,
+			}
+
+			err = unifi.refreshClient(rc)
+			if err != nil {
+				log.Fatalf("got error refreshing client: %v", err)
 			}
 		}
 
