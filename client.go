@@ -208,13 +208,13 @@ func (u *unifiClient) getActiveClients() error {
 
 	for _, c := range clients {
 		a := activeClient{
-			MAC:         c.Mac,
+			MAC:         strings.ToLower(c.Mac),
 			ID:          c.UserID,
 			DisplayName: c.DisplayName,
 			HostName:    c.Hostname,
 		}
 		u.activeClients[c.DisplayName] = a
-		log.Printf("DisplayName %q HostName: %q MAC: %s and ID: %s", c.DisplayName, c.Hostname, c.Mac, c.UserID)
+		log.Printf("DisplayName %q HostName: %q MAC: %s and ID: %s", a.DisplayName, a.HostName, a.MAC, a.ID)
 	}
 	fmt.Println()
 
@@ -274,11 +274,6 @@ func (u *unifiClient) refreshClient(h *refreshClient) error {
 	b, err := json.Marshal(h)
 	if err != nil {
 		return err
-	}
-
-	info, ok := u.activeClients[h.Name]
-	if !ok {
-		return fmt.Errorf("did not find %s in active client list", h.Name)
 	}
 
 	req, err := http.NewRequest("PUT", fmt.Sprintf("%s/proxy/network/api/s/default/rest/user/%s", u.endpoint, info.ID), bytes.NewReader(b))
@@ -341,6 +336,10 @@ func (u *unifiClient) removeClient(h *removeClient) error {
 
 func (u *unifiClient) isActiveClient(mac string) bool {
 	// check if the client is in the list of active clients
-	_, ok := u.activeClients[mac]
-	return ok
+	for _, v := range u.activeClients {
+		if v.MAC == mac {
+			return true
+		}
+	}
+	return false
 }
