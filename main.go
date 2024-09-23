@@ -115,17 +115,30 @@ func main() {
 				log.Fatalf("got error removing client: %v", err)
 			}
 
-			rc := &refreshClient{
-				Name:       name,
-				FixedIP:    ipaddr,
-				UseFixedip: true,
-				Mac:        mac,
+			hc := &initialHomeClient{
+				Name:                  name,
+				Mac:                   mac,
+				FixedIP:               ipaddr,
+				UseFixedip:            true,
+				LocalDNSRecordEnabled: false,
 			}
 
-			err = unifi.refreshClient(rc)
+			err = unifi.initialClientSetup(hc)
 			if err != nil {
-				log.Fatalf("got error refreshing client: %v", err)
+				log.Fatalf("got error configuring client: %v", err)
 			}
+
+			// rc := &refreshClient{
+			// 	Name:       name,
+			// 	FixedIP:    ipaddr,
+			// 	UseFixedip: true,
+			// 	Mac:        mac,
+			// }
+
+			// err = unifi.refreshClient(rc)
+			// if err != nil {
+			// 	log.Fatalf("got error refreshing client: %v", err)
+			// }
 		}
 	}
 
