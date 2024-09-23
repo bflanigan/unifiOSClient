@@ -73,7 +73,7 @@ func main() {
 			continue
 		}
 
-		fields := strings.Fields(s.Text())
+		fields := strings.Split(s.Text(), `,`)
 		name := strings.TrimSpace(fields[0])
 		mac := strings.TrimSpace(strings.ToLower(fields[1]))
 		ipaddr := strings.TrimSpace(fields[2])
@@ -150,12 +150,13 @@ func main() {
 
 func isValidLine(s string) bool {
 
-	if !strings.Contains(s, "192.168") {
+	fields := strings.Split(s, `,`)
+
+	if !strings.HasPrefix(fields[2], "192.168") {
 		log.Printf("Skipping line %q - did not see IP address starting with 192.168\n", s)
 		return false
 	}
 
-	fields := strings.Fields(s)
 	numFields := len(fields)
 	if numFields <= 2 {
 		log.Printf("Skipping line %q - insufficient number of fields (%d)\n", s, numFields)
