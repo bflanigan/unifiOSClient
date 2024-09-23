@@ -215,7 +215,7 @@ func (u *unifiClient) getActiveClients() error {
 			HostName:    c.Hostname,
 		}
 		u.activeClients[c.DisplayName] = a
-		log.Printf("DisplayName %q HostName: %q MAC: %s and ID: %s", a.DisplayName, a.HostName, a.MAC, a.ID)
+		log.Printf("Adding client - DisplayName %q HostName: %q MAC: %s and ID: %s", a.DisplayName, a.HostName, a.MAC, a.ID)
 	}
 	fmt.Println()
 
