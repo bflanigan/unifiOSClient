@@ -119,6 +119,7 @@ func main() {
 				Name:       name,
 				FixedIP:    ipaddr,
 				UseFixedip: true,
+				Mac:        mac,
 			}
 
 			err = unifi.refreshClient(rc)

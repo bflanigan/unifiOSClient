@@ -52,6 +52,7 @@ type refreshClient struct {
 	UsergroupID                   string `json:"usergroup_id"`
 	UseFixedip                    bool   `json:"use_fixedip"`
 	FixedIP                       string `json:"fixed_ip"`
+	Mac                           string
 }
 
 type removeClient struct {
@@ -276,7 +277,14 @@ func (u *unifiClient) refreshClient(h *refreshClient) error {
 		return err
 	}
 
-	req, err := http.NewRequest("PUT", fmt.Sprintf("%s/proxy/network/api/s/default/rest/user/%s", u.endpoint, info.ID), bytes.NewReader(b))
+	var ID string
+	for _, v := range u.activeClients {
+		if v.MAC == h.Mac {
+			ID = v.ID
+		}
+	}
+
+	req, err := http.NewRequest("PUT", fmt.Sprintf("%s/proxy/network/api/s/default/rest/user/%s", u.endpoint, ID), bytes.NewReader(b))
 	if err != nil {
 		return fmt.Errorf("failed to construct client refresh request: %v", err)
 	}
