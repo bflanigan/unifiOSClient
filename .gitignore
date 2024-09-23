@@ -26,3 +26,5 @@ go.work.sum
 
 unifiOSClient
 clients.txt
+
+*csv*
