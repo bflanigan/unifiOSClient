@@ -151,20 +151,20 @@ func main() {
 func isValidLine(s string) bool {
 
 	if !strings.Contains(s, "192.168") {
-		log.Printf("Skipping line %q - did not see 192.168 in it\n", s)
+		log.Printf("Skipping line %q - did not see IP address starting with 192.168\n", s)
 		return false
 	}
 
 	fields := strings.Fields(s)
 	numFields := len(fields)
 	if numFields <= 2 {
-		log.Printf("Skipping line %q - insufficient number of fields (%d) in it\n", s, numFields)
+		log.Printf("Skipping line %q - insufficient number of fields (%d)\n", s, numFields)
 		return false
 
 	}
 
 	if !strings.Contains(fields[1], `:`) {
-		log.Printf("skipping line %q - appears to be malformed MAC address", s)
+		log.Printf("skipping line %q - appears to be malformed MAC address (%s)", s, fields[1])
 		return false
 	}
 
