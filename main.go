@@ -16,9 +16,13 @@ func main() {
 	var endpoint, username, clientFile, mfatoken, password string
 	var initialSetup bool
 	flag.StringVar(&endpoint, "endpoint", "https://192.168.1.1", "Controller endpoint")
-	flag.StringVar(&clientFile, "clientFile", "clients.txt", "path to the file of clients")
+	flag.StringVar(&clientFile, "clientFile", "", "path to the CSV of clients")
 	flag.BoolVar(&initialSetup, "initialSetup", false, "use for initial setup")
 	flag.Parse()
+
+	if len(clientFile) == 0 {
+		log.Fatalf("you must specify the csv file with the clientFile option")
+	}
 
 	user, ok := os.LookupEnv("UNIFIUSER")
 	if ok {
@@ -41,9 +45,14 @@ func main() {
 		fmt.Println()
 	}
 
-	fmt.Printf("Enter the MFA token: ")
-	fmt.Scan(&mfatoken)
-	fmt.Println()
+	otp, ook := os.LookupEnv("UNIFIOTP")
+	if ook {
+		mfatoken = otp
+	} else {
+		fmt.Printf("Enter the MFA token: ")
+		fmt.Scan(&mfatoken)
+		fmt.Println()
+	}
 
 	unifi, err := newClient(endpoint, username, password, mfatoken)
 	if err != nil {
@@ -107,7 +116,6 @@ func main() {
 			removeC := &removeClient{
 				Cmd:  "forget-sta",
 				Macs: macSlice,
-				Name: name,
 			}
 
 			err = unifi.removeClient(removeC)

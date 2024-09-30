@@ -58,7 +58,7 @@ type initialHomeClient struct {
 type removeClient struct {
 	Macs []string `json:"macs"`
 	Cmd  string   `json:"cmd"`
-	Name string
+	name string
 }
 
 type unifiHomeClient []struct {
@@ -311,7 +311,7 @@ func (u *unifiClient) initialClientSetup(h *initialHomeClient) error {
 
 func (u *unifiClient) removeClient(h *removeClient) error {
 
-	log.Printf("Removing home client: %s\n", h.Name)
+	log.Printf("Removing client with MAC: %s\n", h.Macs[0])
 	b, err := json.Marshal(h)
 	if err != nil {
 		return err
@@ -343,7 +343,7 @@ func (u *unifiClient) removeClient(h *removeClient) error {
 }
 
 func (u *unifiClient) isActiveClient(mac string) bool {
-	// check if the client is in the list of active clients
+	// check if the MAC address is in the list of active clients
 	for _, v := range u.activeClients {
 		if v.MAC == mac {
 			return true
