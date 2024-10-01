@@ -1,0 +1,4 @@
+Device,MAC,IP Address
+,,
+Printer_MFC5850_Ethernet,aa:bb:cc:dd:ee:ff,192.168.5.29
+M1_MBP_Ethernet,aa:bb:cc:dd:ee:12,192.168.1.9
