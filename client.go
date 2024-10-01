@@ -43,23 +43,23 @@ type initialHomeClient struct {
 	FixedIP               string `json:"fixed_ip"`
 }
 
-// type refreshClient struct {
-// 	LocalDNSRecordEnabled         bool   `json:"local_dns_record_enabled"`
-// 	LocalDNSRecord                string `json:"local_dns_record"`
-// 	Name                          string `json:"name"`
-// 	VirtualNetworkOverrideEnabled bool   `json:"virtual_network_override_enabled"`
-// 	VirtualNetworkOverrideID      string `json:"virtual_network_override_id"`
-// 	UsergroupID                   string `json:"usergroup_id"`
-// 	UseFixedip                    bool   `json:"use_fixedip"`
-// 	FixedIP                       string `json:"fixed_ip"`
-// 	Mac                           string
-// }
-
-type removeClient struct {
-	Macs []string `json:"macs"`
-	Cmd  string   `json:"cmd"`
-	name string
+type refreshClient struct {
+	LocalDNSRecordEnabled         bool   `json:"local_dns_record_enabled"`
+	LocalDNSRecord                string `json:"local_dns_record"`
+	Name                          string `json:"name"`
+	VirtualNetworkOverrideEnabled bool   `json:"virtual_network_override_enabled"`
+	VirtualNetworkOverrideID      string `json:"virtual_network_override_id"`
+	UsergroupID                   string `json:"usergroup_id"`
+	UseFixedip                    bool   `json:"use_fixedip"`
+	FixedIP                       string `json:"fixed_ip"`
+	Mac                           string
 }
+
+// type removeClient struct {
+// 	Macs []string `json:"macs"`
+// 	Cmd  string   `json:"cmd"`
+// 	name string
+// }
 
 type unifiHomeClient []struct {
 	Anomalies   int    `json:"anomalies,omitempty"`
@@ -233,7 +233,7 @@ func (u *unifiClient) decorateRequest(req *http.Request, omitCSRFToken bool) {
 
 func (u *unifiClient) initialClientSetup(h *initialHomeClient) error {
 
-	log.Printf("Configuring home client: %s\n", h.Name)
+	log.Printf("Adding home client: %s / %s / %s", h.Name, h.FixedIP, h.Mac)
 	b, err := json.Marshal(h)
 	if err != nil {
 		return err
@@ -241,13 +241,13 @@ func (u *unifiClient) initialClientSetup(h *initialHomeClient) error {
 
 	req, err := http.NewRequest("POST", fmt.Sprintf("%s/proxy/network/api/s/default/rest/user", u.endpoint), bytes.NewReader(b))
 	if err != nil {
-		return fmt.Errorf("failed to construct client update request: %v", err)
+		return fmt.Errorf("failed to construct client add request: %v", err)
 	}
 	u.decorateRequest(req, false)
 
 	resp, err := u.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("got error updating client: %v", err)
+		return fmt.Errorf("got error adding client: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -258,74 +258,41 @@ func (u *unifiClient) initialClientSetup(h *initialHomeClient) error {
 		}
 
 		if strings.Contains(string(bodyResponse), "api.err.MacUsed") {
-			log.Printf("%s was already configured, skipping", h.Name)
+			log.Printf("%s / %s / %s was already added, skipping", h.Name, h.FixedIP, h.Mac)
 			return nil
 		}
 
 		log.Printf("Failure response body: %v", string(bodyResponse))
-		return fmt.Errorf("did not get HTTP 200 updating client")
+		return fmt.Errorf("did not get HTTP 200 adding client")
 	}
 
 	return nil
 }
 
-// func (u *unifiClient) refreshClient(h *refreshClient) error {
+func (u *unifiClient) refreshClient(h *refreshClient) error {
 
-// 	log.Printf("Refreshing home client: %s\n", h.Name)
-// 	b, err := json.Marshal(h)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	var ID string
-// 	for _, v := range u.activeClients {
-// 		if v.MAC == h.Mac {
-// 			ID = v.ID
-// 		}
-// 	}
-
-// 	req, err := http.NewRequest("PUT", fmt.Sprintf("%s/proxy/network/api/s/default/rest/user/%s", u.endpoint, ID), bytes.NewReader(b))
-// 	if err != nil {
-// 		return fmt.Errorf("failed to construct client refresh request: %v", err)
-// 	}
-// 	u.decorateRequest(req, false)
-
-// 	resp, err := u.client.Do(req)
-// 	if err != nil {
-// 		return fmt.Errorf("got error refreshing client: %v", err)
-// 	}
-// 	defer resp.Body.Close()
-
-// 	if resp.StatusCode != 200 {
-// 		bodyResponse, err := io.ReadAll(resp.Body)
-// 		if err != nil {
-// 			return err
-// 		}
-
-// 		log.Printf("Failure response body: %v", string(bodyResponse))
-// 		return fmt.Errorf("did not get HTTP 200 refreshing client")
-// 	}
-
-// 	return nil
-// }
-
-func (u *unifiClient) removeClient(h *removeClient) error {
-
-	log.Printf("Removing client with MAC: %s\n", h.Macs[0])
+	log.Printf("Refreshing home client: %s / %s / %s", h.Name, h.FixedIP, h.Mac)
 	b, err := json.Marshal(h)
 	if err != nil {
 		return err
 	}
 
-	req, err := http.NewRequest("POST", fmt.Sprintf("%s/proxy/network/api/s/default/cmd/stamgr", u.endpoint), bytes.NewReader(b))
+	var ID string
+	for _, v := range u.activeClients {
+		if v.MAC == h.Mac {
+			ID = v.ID
+		}
+	}
+
+	req, err := http.NewRequest("PUT", fmt.Sprintf("%s/proxy/network/api/s/default/rest/user/%s", u.endpoint, ID), bytes.NewReader(b))
 	if err != nil {
-		return fmt.Errorf("failed to construct client removal request: %v", err)
+		return fmt.Errorf("failed to construct client refresh request: %v", err)
 	}
 	u.decorateRequest(req, false)
 
 	resp, err := u.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("got error removing client: %v", err)
+		return fmt.Errorf("got error refreshing client: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -336,11 +303,44 @@ func (u *unifiClient) removeClient(h *removeClient) error {
 		}
 
 		log.Printf("Failure response body: %v", string(bodyResponse))
-		return fmt.Errorf("did not get HTTP 200 removing client")
+		return fmt.Errorf("did not get HTTP 200 refreshing client")
 	}
 
 	return nil
 }
+
+// func (u *unifiClient) removeClient(h *removeClient) error {
+
+// 	log.Printf("Removing client with MAC: %s\n", h.Macs[0])
+// 	b, err := json.Marshal(h)
+// 	if err != nil {
+// 		return err
+// 	}
+
+// 	req, err := http.NewRequest("POST", fmt.Sprintf("%s/proxy/network/api/s/default/cmd/stamgr", u.endpoint), bytes.NewReader(b))
+// 	if err != nil {
+// 		return fmt.Errorf("failed to construct client removal request: %v", err)
+// 	}
+// 	u.decorateRequest(req, false)
+
+// 	resp, err := u.client.Do(req)
+// 	if err != nil {
+// 		return fmt.Errorf("got error removing client: %v", err)
+// 	}
+// 	defer resp.Body.Close()
+
+// 	if resp.StatusCode != 200 {
+// 		bodyResponse, err := io.ReadAll(resp.Body)
+// 		if err != nil {
+// 			return err
+// 		}
+
+// 		log.Printf("Failure response body: %v", string(bodyResponse))
+// 		return fmt.Errorf("did not get HTTP 200 removing client")
+// 	}
+
+// 	return nil
+// }
 
 func (u *unifiClient) isActiveClient(mac string) bool {
 	// check if the MAC address is in the list of active clients

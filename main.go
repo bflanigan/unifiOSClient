@@ -14,10 +14,10 @@ import (
 func main() {
 
 	var endpoint, username, clientFile, mfatoken, password string
-	var initialSetup bool
+	// var initialSetup bool
 	flag.StringVar(&endpoint, "endpoint", "https://192.168.1.1", "Controller endpoint")
 	flag.StringVar(&clientFile, "clientFile", "", "path to the CSV of clients")
-	flag.BoolVar(&initialSetup, "initialSetup", false, "use for initial setup")
+	// flag.BoolVar(&initialSetup, "initialSetup", false, "use for initial setup")
 	flag.Parse()
 
 	if len(clientFile) == 0 {
@@ -60,6 +60,7 @@ func main() {
 	}
 
 	log.Printf("Refreshing current list of active clients")
+	fmt.Println()
 	err = unifi.getActiveClients()
 	if err != nil {
 		log.Fatalln(err)
@@ -73,9 +74,12 @@ func main() {
 	defer f.Close()
 
 	log.Printf("Reading file with clients: %s", clientFile)
+	fmt.Println()
 
 	s := bufio.NewScanner(f)
 	for s.Scan() {
+
+		// log.Printf("examining line: %q", s.Text())
 
 		valid := isValidLine(s.Text())
 		if !valid {
@@ -87,7 +91,8 @@ func main() {
 		mac := strings.TrimSpace(strings.ToLower(fields[1]))
 		ipaddr := strings.TrimSpace(fields[2])
 
-		if initialSetup {
+		present := unifi.isActiveClient(mac)
+		if !present {
 
 			hc := &initialHomeClient{
 				Name:                  name,
@@ -99,54 +104,47 @@ func main() {
 
 			err = unifi.initialClientSetup(hc)
 			if err != nil {
-				log.Fatalf("got error configuring client: %v", err)
+				log.Fatalf("got error adding client: %v", err)
 			}
+			continue
+		}
 
-		} else {
+		// var macSlice []string
+		// macSlice = append(macSlice, mac)
 
-			present := unifi.isActiveClient(mac)
-			if !present {
-				log.Printf("Skipping update for %s - not an active client", name)
-				continue
-			}
+		// removeC := &removeClient{
+		// 	Cmd:  "forget-sta",
+		// 	Macs: macSlice,
+		// }
 
-			var macSlice []string
-			macSlice = append(macSlice, mac)
+		// err = unifi.removeClient(removeC)
+		// if err != nil {
+		// 	log.Fatalf("got error removing client: %v", err)
+		// }
 
-			removeC := &removeClient{
-				Cmd:  "forget-sta",
-				Macs: macSlice,
-			}
+		// hc := &initialHomeClient{
+		// 	Name:                  name,
+		// 	Mac:                   mac,
+		// 	FixedIP:               ipaddr,
+		// 	UseFixedip:            true,
+		// 	LocalDNSRecordEnabled: false,
+		// }
 
-			err = unifi.removeClient(removeC)
-			if err != nil {
-				log.Fatalf("got error removing client: %v", err)
-			}
+		// err = unifi.initialClientSetup(hc)
+		// if err != nil {
+		// 	log.Fatalf("got error configuring client: %v", err)
+		// }
 
-			hc := &initialHomeClient{
-				Name:                  name,
-				Mac:                   mac,
-				FixedIP:               ipaddr,
-				UseFixedip:            true,
-				LocalDNSRecordEnabled: false,
-			}
+		rc := &refreshClient{
+			Name:       name,
+			FixedIP:    ipaddr,
+			UseFixedip: true,
+			Mac:        mac,
+		}
 
-			err = unifi.initialClientSetup(hc)
-			if err != nil {
-				log.Fatalf("got error configuring client: %v", err)
-			}
-
-			// rc := &refreshClient{
-			// 	Name:       name,
-			// 	FixedIP:    ipaddr,
-			// 	UseFixedip: true,
-			// 	Mac:        mac,
-			// }
-
-			// err = unifi.refreshClient(rc)
-			// if err != nil {
-			// 	log.Fatalf("got error refreshing client: %v", err)
-			// }
+		err = unifi.refreshClient(rc)
+		if err != nil {
+			log.Fatalf("got error refreshing client: %v", err)
 		}
 	}
 
@@ -158,22 +156,27 @@ func main() {
 
 func isValidLine(s string) bool {
 
+	if !strings.Contains(s, `,`) {
+		// log.Printf("Skipping line %q - did not see IP address starting with 192.168\n", s)
+		return false
+	}
+
 	fields := strings.Split(s, `,`)
 
 	if !strings.HasPrefix(fields[2], "192.168") {
-		log.Printf("Skipping line %q - did not see IP address starting with 192.168\n", s)
+		// log.Printf("Skipping line %q - did not see IP address starting with 192.168\n", s)
 		return false
 	}
 
 	numFields := len(fields)
 	if numFields <= 2 {
-		log.Printf("Skipping line %q - insufficient number of fields (%d)\n", s, numFields)
+		// log.Printf("Skipping line %q - insufficient number of fields (%d)\n", s, numFields)
 		return false
 
 	}
 
 	if !strings.Contains(fields[1], `:`) {
-		log.Printf("skipping line %q - appears to be malformed MAC address (%s)", s, fields[1])
+		// log.Printf("skipping line %q - appears to be malformed MAC address (%s)", s, fields[1])
 		return false
 	}
 
