@@ -222,6 +222,16 @@ func (u *unifiClient) getActiveClients() error {
 	return nil
 }
 
+func (u *unifiClient) isActiveClient(mac string) bool {
+	// check if the MAC address is in the list of active clients
+	for _, v := range u.activeClients {
+		if v.MAC == mac {
+			return true
+		}
+	}
+	return false
+}
+
 func (u *unifiClient) decorateRequest(req *http.Request, omitCSRFToken bool) {
 	req.Header.Add("content-type", "application/json")
 	req.Header.Add("accept", "*/*")
@@ -262,7 +272,13 @@ func (u *unifiClient) initialClientSetup(h *initialHomeClient) error {
 			return nil
 		}
 
-		log.Printf("Failure response body: %v", string(bodyResponse))
+		if strings.Contains(string(bodyResponse), "api.err.InvalidFixedIP") {
+			log.Printf("%s / %s / %s failed to add - did you setup the additional network for this client yet?", h.Name, h.FixedIP, h.Mac)
+			log.Printf("Failure response body: %v", string(bodyResponse))
+		} else {
+			log.Printf("Failure response body: %v", string(bodyResponse))
+		}
+
 		return fmt.Errorf("did not get HTTP 200 adding client")
 	}
 
@@ -341,13 +357,3 @@ func (u *unifiClient) refreshClient(h *refreshClient) error {
 
 // 	return nil
 // }
-
-func (u *unifiClient) isActiveClient(mac string) bool {
-	// check if the MAC address is in the list of active clients
-	for _, v := range u.activeClients {
-		if v.MAC == mac {
-			return true
-		}
-	}
-	return false
-}

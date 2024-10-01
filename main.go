@@ -14,10 +14,8 @@ import (
 func main() {
 
 	var endpoint, username, clientFile, mfatoken, password string
-	// var initialSetup bool
 	flag.StringVar(&endpoint, "endpoint", "https://192.168.1.1", "Controller endpoint")
 	flag.StringVar(&clientFile, "clientFile", "", "path to the CSV of clients")
-	// flag.BoolVar(&initialSetup, "initialSetup", false, "use for initial setup")
 	flag.Parse()
 
 	if len(clientFile) == 0 {
