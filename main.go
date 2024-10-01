@@ -155,7 +155,12 @@ func main() {
 func isValidLine(s string) bool {
 
 	if !strings.Contains(s, `,`) {
-		// log.Printf("Skipping line %q - did not see IP address starting with 192.168\n", s)
+		// log.Printf("Skipping line %q - did not see comma delimited fields\n", s)
+		return false
+	}
+
+	if strings.HasPrefix(s, `#`) {
+		// log.Printf("Skipping line %q - commented out\n", s)
 		return false
 	}
 
