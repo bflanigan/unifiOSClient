@@ -26,6 +26,7 @@ type activeClient struct {
 	MAC         string
 	DisplayName string
 	HostName    string
+	Model       string
 }
 
 type login struct {
@@ -53,6 +54,150 @@ type refreshClient struct {
 	UseFixedip                    bool   `json:"use_fixedip"`
 	FixedIP                       string `json:"fixed_ip"`
 	Mac                           string
+}
+
+type unifiDevices struct {
+	AccessDevices  []any `json:"access_devices,omitempty"`
+	ApolloDevices  []any `json:"apollo_devices,omitempty"`
+	ConnectDevices []any `json:"connect_devices,omitempty"`
+	LedDevices     []any `json:"led_devices,omitempty"`
+	NetworkDevices []struct {
+		ID                          string `json:"_id,omitempty"`
+		AdoptState                  int    `json:"adopt_state,omitempty"`
+		AdoptableWhenUpgraded       bool   `json:"adoptable_when_upgraded,omitempty"`
+		Adopted                     bool   `json:"adopted,omitempty"`
+		BytesR                      int    `json:"bytes-r,omitempty"`
+		ConnectionNetworkID         string `json:"connection_network_id,omitempty"`
+		ConnectionNetworkName       string `json:"connection_network_name,omitempty"`
+		CountrycodeTable            []any  `json:"countrycode_table,omitempty"`
+		Default                     bool   `json:"default,omitempty"`
+		DeviceType                  string `json:"device_type,omitempty"`
+		Disabled                    bool   `json:"disabled,omitempty"`
+		DiscoveredVia               string `json:"discovered_via,omitempty"`
+		DisplayableVersion          string `json:"displayable_version,omitempty"`
+		DownloadSpeedBytesPerSecond int    `json:"download_speed_bytes_per_second,omitempty"`
+		EthernetOverrides           []struct {
+			Ifname       string `json:"ifname,omitempty"`
+			Networkgroup string `json:"networkgroup,omitempty"`
+		} `json:"ethernet_overrides,omitempty"`
+		FwCaps                    int    `json:"fw_caps,omitempty"`
+		IP                        string `json:"ip,omitempty"`
+		IsAccessPoint             bool   `json:"is_access_point,omitempty"`
+		IsAdoptionQueued          bool   `json:"is_adoption_queued,omitempty"`
+		Isolated                  bool   `json:"isolated,omitempty"`
+		LanIP                     string `json:"lan_ip,omitempty"`
+		LastConnectionNetworkID   string `json:"last_connection_network_id,omitempty"`
+		LastConnectionNetworkName string `json:"last_connection_network_name,omitempty"`
+		LastSeen                  int    `json:"last_seen,omitempty"`
+		LastUplink                struct {
+			PortIdx   int    `json:"port_idx,omitempty"`
+			Type      string `json:"type,omitempty"`
+			UplinkMac string `json:"uplink_mac,omitempty"`
+		} `json:"last_uplink,omitempty"`
+		LicenseState      string `json:"license_state,omitempty"`
+		Locating          bool   `json:"locating,omitempty"`
+		LteConnected      bool   `json:"lte_connected,omitempty"`
+		Mac               string `json:"mac,omitempty"`
+		Model             string `json:"model,omitempty"`
+		ModelInEol        bool   `json:"model_in_eol,omitempty"`
+		ModelInLts        bool   `json:"model_in_lts,omitempty"`
+		ModelIncompatible bool   `json:"model_incompatible,omitempty"`
+		Name              string `json:"name,omitempty"`
+		NumSta            int    `json:"num_sta,omitempty"`
+		PortTable         []struct {
+			AggregatedBy bool   `json:"aggregated_by,omitempty"`
+			Autoneg      bool   `json:"autoneg,omitempty"`
+			Enable       bool   `json:"enable,omitempty"`
+			FullDuplex   bool   `json:"full_duplex,omitempty"`
+			Ifname       string `json:"ifname,omitempty"`
+			IP           string `json:"ip,omitempty"`
+			IsUplink     bool   `json:"is_uplink,omitempty"`
+			Media        string `json:"media,omitempty"`
+			Name         string `json:"name,omitempty"`
+			PoeCaps      int    `json:"poe_caps,omitempty"`
+			PoeEnable    bool   `json:"poe_enable,omitempty"`
+			PortIdx      int    `json:"port_idx,omitempty"`
+			PortPoe      bool   `json:"port_poe,omitempty"`
+			RxBytes      int    `json:"rx_bytes,omitempty"`
+			RxBytesR     int    `json:"rx_bytes-r,omitempty"`
+			RxDropped    int    `json:"rx_dropped,omitempty"`
+			RxErrors     int    `json:"rx_errors,omitempty"`
+			RxPackets    int    `json:"rx_packets,omitempty"`
+			Satisfaction int    `json:"satisfaction,omitempty"`
+			Speed        int    `json:"speed,omitempty"`
+			SpeedCaps    int    `json:"speed_caps,omitempty"`
+			TxBytes      int    `json:"tx_bytes,omitempty"`
+			TxBytesR     int    `json:"tx_bytes-r,omitempty"`
+			TxDropped    int    `json:"tx_dropped,omitempty"`
+			TxErrors     int    `json:"tx_errors,omitempty"`
+			TxPackets    int    `json:"tx_packets,omitempty"`
+			Up           bool   `json:"up,omitempty"`
+			OpMode       string `json:"op_mode,omitempty"`
+		} `json:"port_table,omitempty"`
+		ProductLine      string `json:"product_line,omitempty"`
+		RadioTable       []any  `json:"radio_table,omitempty"`
+		RadioTableStats  []any  `json:"radio_table_stats,omitempty"`
+		Restarting       bool   `json:"restarting,omitempty"`
+		RxBytes          int    `json:"rx_bytes,omitempty"`
+		RxBytesD         int    `json:"rx_bytes-d,omitempty"`
+		Satisfaction     int    `json:"satisfaction,omitempty"`
+		SpectrumScanning bool   `json:"spectrum_scanning,omitempty"`
+		State            int    `json:"state,omitempty"`
+		SysStats         struct {
+			Loadavg1  float64 `json:"loadavg_1,omitempty"`
+			Loadavg15 float64 `json:"loadavg_15,omitempty"`
+			Loadavg5  float64 `json:"loadavg_5,omitempty"`
+			MemBuffer int     `json:"mem_buffer,omitempty"`
+			MemTotal  int64   `json:"mem_total,omitempty"`
+			MemUsed   int     `json:"mem_used,omitempty"`
+		} `json:"sys_stats,omitempty"`
+		SystemStats struct {
+			CPU    float64 `json:"cpu,omitempty"`
+			Mem    float64 `json:"mem,omitempty"`
+			Uptime int     `json:"uptime,omitempty"`
+		} `json:"system-stats,omitempty"`
+		TxBytes           int    `json:"tx_bytes,omitempty"`
+		TxBytesD          int    `json:"tx_bytes-d,omitempty"`
+		Type              string `json:"type,omitempty"`
+		Unsupported       bool   `json:"unsupported,omitempty"`
+		UnsupportedReason int    `json:"unsupported_reason,omitempty"`
+		Upgradable        bool   `json:"upgradable,omitempty"`
+		UpgradeState      int    `json:"upgrade_state,omitempty"`
+		Uplink            struct {
+			Name      string `json:"name,omitempty"`
+			PortIdx   int    `json:"port_idx,omitempty"`
+			Speed     int    `json:"speed,omitempty"`
+			Type      string `json:"type,omitempty"`
+			UplinkMac string `json:"uplink_mac,omitempty"`
+		} `json:"uplink,omitempty"`
+		UplinkTable                         []any   `json:"uplink_table,omitempty"`
+		UploadSpeedBytesPerSecond           int     `json:"upload_speed_bytes_per_second,omitempty"`
+		Uptime                              int     `json:"uptime,omitempty"`
+		UsageBytes                          float64 `json:"usage_bytes,omitempty"`
+		VapTable                            []any   `json:"vap_table,omitempty"`
+		Version                             string  `json:"version,omitempty"`
+		Ipv4LeaseExpirationTimestampSeconds int     `json:"ipv4_lease_expiration_timestamp_seconds,omitempty"`
+		LastUplink0                         struct {
+			PortIdx          int    `json:"port_idx,omitempty"`
+			Type             string `json:"type,omitempty"`
+			UplinkDeviceName string `json:"uplink_device_name,omitempty"`
+			UplinkMac        string `json:"uplink_mac,omitempty"`
+			UplinkRemotePort int    `json:"uplink_remote_port,omitempty"`
+		} `json:"last_uplink,omitempty"`
+		Uplink0 struct {
+			Mac              string `json:"mac,omitempty"`
+			Name             string `json:"name,omitempty"`
+			PortIdx          int    `json:"port_idx,omitempty"`
+			Speed            int    `json:"speed,omitempty"`
+			Type             string `json:"type,omitempty"`
+			UplinkDeviceName string `json:"uplink_device_name,omitempty"`
+			UplinkMac        string `json:"uplink_mac,omitempty"`
+			UplinkRemotePort int    `json:"uplink_remote_port,omitempty"`
+		} `json:"uplink,omitempty"`
+	} `json:"network_devices,omitempty"`
+	ProtectDevices   []any `json:"protect_devices,omitempty"`
+	TalkDevices      []any `json:"talk_devices,omitempty"`
+	UnmanagedDevices []any `json:"unmanaged_devices,omitempty"`
 }
 
 // type removeClient struct {
@@ -216,6 +361,59 @@ func (u *unifiClient) getActiveClients() error {
 		}
 		u.activeClients[c.DisplayName] = a
 		log.Printf("Found active client - DisplayName %q HostName: %q MAC: %s and ID: %s", a.DisplayName, a.HostName, a.MAC, a.ID)
+	}
+	fmt.Println()
+
+	return nil
+}
+
+func (u *unifiClient) getActiveUnifiDevices() error {
+
+	req, err := http.NewRequest("GET", fmt.Sprintf("%s/proxy/network/v2/api/site/default/device", u.endpoint), nil)
+	if err != nil {
+		return fmt.Errorf("failed to construct active client list request: %v", err)
+	}
+	u.decorateRequest(req, false)
+
+	resp, err := u.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("got error making active client list: %v", err)
+	}
+	defer resp.Body.Close()
+
+	b, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return err
+	}
+
+	if resp.StatusCode != 200 {
+		log.Printf("Response body: %v", string(b))
+		return fmt.Errorf("did not get HTTP 200 updating client")
+	}
+
+	var devices unifiDevices
+
+	err = json.Unmarshal(b, &devices)
+	if err != nil {
+		return err
+	}
+
+	for _, c := range devices.NetworkDevices {
+
+		if c.Model == "UCGMAX" {
+			// don't screw ourselves and make changes to the gateway
+			// do this in the UI
+			continue
+		}
+
+		a := activeClient{
+			MAC:         strings.ToLower(c.Mac),
+			ID:          c.ID,
+			DisplayName: c.Name,
+			Model:       c.Model,
+		}
+		u.activeClients[c.Mac] = a
+		log.Printf("Found Unifi Device - DisplayName %q Model: %s MAC: %s and ID: %s", a.DisplayName, a.Model, a.MAC, a.ID)
 	}
 	fmt.Println()
 

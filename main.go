@@ -57,8 +57,13 @@ func main() {
 		log.Fatalf("failed to construct unifi client: %v", err)
 	}
 
-	log.Printf("Refreshing current list of active clients")
+	log.Printf("Refreshing current list of active clients and Unifi devices")
 	fmt.Println()
+	err = unifi.getActiveUnifiDevices()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	err = unifi.getActiveClients()
 	if err != nil {
 		log.Fatalln(err)
