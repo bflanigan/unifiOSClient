@@ -94,8 +94,8 @@ func main() {
 		mac := strings.TrimSpace(strings.ToLower(fields[1]))
 		ipaddr := strings.TrimSpace(fields[2])
 
-		present := unifi.isActiveClient(mac)
-		if !present {
+		present, isUnifi := unifi.isActiveClient(mac)
+		if !present && !isUnifi {
 
 			hc := &initialHomeClient{
 				Name:                  name,
@@ -138,16 +138,68 @@ func main() {
 		// 	log.Fatalf("got error configuring client: %v", err)
 		// }
 
-		rc := &refreshClient{
-			Name:       name,
-			FixedIP:    ipaddr,
-			UseFixedip: true,
-			Mac:        mac,
+		if !isUnifi {
+			// client is active but it's not a Unifi device
+			rc := &refreshClient{
+				Name:       name,
+				FixedIP:    ipaddr,
+				UseFixedip: true,
+				Mac:        mac,
+			}
+
+			err = unifi.refreshClient(rc)
+			if err != nil {
+				log.Fatalf("got error refreshing client: %v", err)
+			}
+			continue
 		}
 
-		err = unifi.refreshClient(rc)
+		// unifiDevice that is managed
+		ac, err := unifi.clientFromMac(mac)
 		if err != nil {
-			log.Fatalf("got error refreshing client: %v", err)
+			log.Fatalf("did not find Unifi device in activeClient map: %v", err)
+		}
+
+		octets := strings.Split(ipaddr, `.`)
+		octets[3] = "1"
+
+		var gateway string
+		for _, o := range octets {
+			gateway = gateway + o + "."
+		}
+
+		// strip trailing . from gateway
+		gateway = strings.Trim(gateway, `.`)
+
+		// Unifi device is active and present
+		rd := &refreshDevice{
+			id:            ac.ID,
+			Name:          name,
+			MgmtNetworkID: ac.MgmtNetworkID,
+			ConfigNetwork: struct {
+				Type           string `json:"type,omitempty"`
+				IP             string `json:"ip,omitempty"`
+				Netmask        string `json:"netmask,omitempty"`
+				Gateway        string `json:"gateway,omitempty"`
+				DNS1           string `json:"dns1,omitempty"`
+				DNS2           string `json:"dns2,omitempty"`
+				Dnssuffix      string `json:"dnssuffix,omitempty"`
+				BondingEnabled bool   `json:"bonding_enabled,omitempty"`
+			}{
+				Type:           "static",
+				IP:             ipaddr,
+				Netmask:        "255.255.255.0",
+				DNS1:           "8.8.8.8",
+				DNS2:           "",
+				Dnssuffix:      "",
+				BondingEnabled: false,
+				Gateway:        gateway,
+			},
+		}
+
+		err = unifi.refreshDevice(rd)
+		if err != nil {
+			log.Fatalf("failed to refresh Unifi device: %v", err)
 		}
 	}
 

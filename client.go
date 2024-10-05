@@ -22,11 +22,13 @@ type unifiClient struct {
 }
 
 type activeClient struct {
-	ID          string
-	MAC         string
-	DisplayName string
-	HostName    string
-	Model       string
+	ID            string
+	MAC           string
+	DisplayName   string
+	HostName      string
+	Model         string
+	MgmtNetworkID string
+	unifiDevice   bool
 }
 
 type login struct {
@@ -54,6 +56,30 @@ type refreshClient struct {
 	UseFixedip                    bool   `json:"use_fixedip"`
 	FixedIP                       string `json:"fixed_ip"`
 	Mac                           string
+}
+
+type refreshDevice struct {
+	id            string
+	Name          string `json:"name,omitempty"`
+	ConfigNetwork struct {
+		Type           string `json:"type,omitempty"`
+		IP             string `json:"ip,omitempty"`
+		Netmask        string `json:"netmask,omitempty"`
+		Gateway        string `json:"gateway,omitempty"`
+		DNS1           string `json:"dns1,omitempty"`
+		DNS2           string `json:"dns2,omitempty"`
+		Dnssuffix      string `json:"dnssuffix,omitempty"`
+		BondingEnabled bool   `json:"bonding_enabled,omitempty"`
+	} `json:"config_network,omitempty"`
+	MgmtNetworkID              string `json:"mgmt_network_id,omitempty"`
+	LedOverride                string `json:"led_override,omitempty"`
+	LedOverrideColorBrightness int    `json:"led_override_color_brightness,omitempty"`
+	LedOverrideColor           string `json:"led_override_color,omitempty"`
+	SnmpContact                string `json:"snmp_contact,omitempty"`
+	SnmpLocation               string `json:"snmp_location,omitempty"`
+	StpPriority                string `json:"stp_priority,omitempty"`
+	EtherLighting              struct {
+	} `json:"ether_lighting,omitempty"`
 }
 
 type unifiDevices struct {
@@ -359,7 +385,7 @@ func (u *unifiClient) getActiveClients() error {
 			DisplayName: c.DisplayName,
 			HostName:    c.Hostname,
 		}
-		u.activeClients[c.DisplayName] = a
+		u.activeClients[a.MAC] = a
 		log.Printf("Found active client - DisplayName %q HostName: %q MAC: %s and ID: %s", a.DisplayName, a.HostName, a.MAC, a.ID)
 	}
 	fmt.Println()
@@ -371,13 +397,13 @@ func (u *unifiClient) getActiveUnifiDevices() error {
 
 	req, err := http.NewRequest("GET", fmt.Sprintf("%s/proxy/network/v2/api/site/default/device", u.endpoint), nil)
 	if err != nil {
-		return fmt.Errorf("failed to construct active client list request: %v", err)
+		return fmt.Errorf("failed to construct active device list request: %v", err)
 	}
 	u.decorateRequest(req, false)
 
 	resp, err := u.client.Do(req)
 	if err != nil {
-		return fmt.Errorf("got error making active client list: %v", err)
+		return fmt.Errorf("got error making active device list: %v", err)
 	}
 	defer resp.Body.Close()
 
@@ -388,7 +414,7 @@ func (u *unifiClient) getActiveUnifiDevices() error {
 
 	if resp.StatusCode != 200 {
 		log.Printf("Response body: %v", string(b))
-		return fmt.Errorf("did not get HTTP 200 updating client")
+		return fmt.Errorf("did not get HTTP 200 listing devices")
 	}
 
 	var devices unifiDevices
@@ -406,11 +432,19 @@ func (u *unifiClient) getActiveUnifiDevices() error {
 			continue
 		}
 
+		if c.DeviceType != "MANAGED" {
+			// don't touch unmanaged devices
+			log.Printf("Skipping unmanaged Unifi Device - DisplayName %q Model: %s MAC: %s", c.Name, c.Model, c.Mac)
+			continue
+		}
+
 		a := activeClient{
-			MAC:         strings.ToLower(c.Mac),
-			ID:          c.ID,
-			DisplayName: c.Name,
-			Model:       c.Model,
+			MAC:           strings.ToLower(c.Mac),
+			ID:            c.ID,
+			DisplayName:   c.Name,
+			Model:         c.Model,
+			MgmtNetworkID: c.ConnectionNetworkID,
+			unifiDevice:   true,
 		}
 		u.activeClients[c.Mac] = a
 		log.Printf("Found Unifi Device - DisplayName %q Model: %s MAC: %s and ID: %s", a.DisplayName, a.Model, a.MAC, a.ID)
@@ -420,14 +454,24 @@ func (u *unifiClient) getActiveUnifiDevices() error {
 	return nil
 }
 
-func (u *unifiClient) isActiveClient(mac string) bool {
+func (u *unifiClient) isActiveClient(mac string) (bool, bool) {
 	// check if the MAC address is in the list of active clients
 	for _, v := range u.activeClients {
 		if v.MAC == mac {
-			return true
+			return true, v.unifiDevice
 		}
 	}
-	return false
+	return false, false
+}
+
+func (u *unifiClient) clientFromMac(mac string) (*activeClient, error) {
+
+	for _, v := range u.activeClients {
+		if v.MAC == mac {
+			return &v, nil
+		}
+	}
+	return nil, fmt.Errorf("did not find MAC in active client list")
 }
 
 func (u *unifiClient) decorateRequest(req *http.Request, omitCSRFToken bool) {
@@ -499,6 +543,48 @@ func (u *unifiClient) refreshClient(h *refreshClient) error {
 	}
 
 	req, err := http.NewRequest("PUT", fmt.Sprintf("%s/proxy/network/api/s/default/rest/user/%s", u.endpoint, ID), bytes.NewReader(b))
+	if err != nil {
+		return fmt.Errorf("failed to construct client refresh request: %v", err)
+	}
+	u.decorateRequest(req, false)
+
+	resp, err := u.client.Do(req)
+	if err != nil {
+		return fmt.Errorf("got error refreshing client: %v", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != 200 {
+		bodyResponse, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return err
+		}
+
+		log.Printf("Failure response body: %v", string(bodyResponse))
+		return fmt.Errorf("did not get HTTP 200 refreshing client")
+	}
+
+	return nil
+}
+
+func (u *unifiClient) refreshDevice(h *refreshDevice) error {
+
+	log.Printf("Refreshing Unifi device: %s", h.Name)
+	b, err := json.Marshal(h)
+	if err != nil {
+		return err
+	}
+
+	// var ID string
+	// for _, v := range u.activeClients {
+	// 	if v.MAC == h.Mac {
+	// 		ID = v.ID
+	// 	}
+	// }
+
+	//TODO need to get ID of device
+
+	req, err := http.NewRequest("PUT", fmt.Sprintf("%s/proxy/network/api/s/default/rest/device/%s", u.endpoint, h.id), bytes.NewReader(b))
 	if err != nil {
 		return fmt.Errorf("failed to construct client refresh request: %v", err)
 	}
