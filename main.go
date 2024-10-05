@@ -186,37 +186,37 @@ func main() {
 func isValidLine(s string) bool {
 
 	if !strings.Contains(s, `,`) {
-		// log.Printf("Skipping line %q - did not see comma delimited fields\n", s)
+		log.Printf("Skipping line %q - did not see comma delimited fields\n", s)
 		return false
 	}
 
 	if strings.HasPrefix(s, `#`) {
-		// log.Printf("Skipping line %q - commented out\n", s)
+		log.Printf("Skipping line %q - commented out\n", s)
 		return false
 	}
 
 	fields := strings.Split(s, `,`)
 
+	numFields := len(fields)
+	if numFields <= 2 {
+		log.Printf("Skipping line %q - insufficient number of fields (%d)\n", s, numFields)
+		return false
+
+	}
+
 	if !strings.HasPrefix(fields[2], "192.168") {
-		// log.Printf("Skipping line %q - did not see IP address starting with 192.168\n", s)
+		log.Printf("Skipping line %q - did not see IP address starting with 192.168\n", s)
 		return false
 	}
 
 	octets := strings.Split(fields[2], `.`)
 	if len(octets) != 4 {
-		// log.Printf("malformed IP address: %s", fields[2])
+		log.Printf("malformed IP address: %s", fields[2])
 		return false
-	}
-
-	numFields := len(fields)
-	if numFields <= 2 {
-		// log.Printf("Skipping line %q - insufficient number of fields (%d)\n", s, numFields)
-		return false
-
 	}
 
 	if !strings.Contains(fields[1], `:`) {
-		// log.Printf("skipping line %q - appears to be malformed MAC address (%s)", s, fields[1])
+		log.Printf("skipping line %q - appears to be malformed MAC address (%s)", s, fields[1])
 		return false
 	}
 

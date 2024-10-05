@@ -563,7 +563,7 @@ func (u *unifiClient) refreshClient(h *refreshClient) error {
 
 func (u *unifiClient) refreshDevice(h *refreshDevice) error {
 
-	log.Printf("Refreshing Unifi device: %s", h.Name)
+	log.Printf("Refreshing Unifi device: %s / %s", h.Name, h.ConfigNetwork.IP)
 	b, err := json.Marshal(h)
 	if err != nil {
 		return err
