@@ -57,8 +57,13 @@ func main() {
 		log.Fatalf("failed to construct unifi client: %v", err)
 	}
 
-	log.Printf("Refreshing current list of active clients")
+	log.Printf("Refreshing current list of active clients and Unifi devices")
 	fmt.Println()
+	err = unifi.getActiveUnifiDevices()
+	if err != nil {
+		log.Fatalln(err)
+	}
+
 	err = unifi.getActiveClients()
 	if err != nil {
 		log.Fatalln(err)
@@ -89,8 +94,8 @@ func main() {
 		mac := strings.TrimSpace(strings.ToLower(fields[1]))
 		ipaddr := strings.TrimSpace(fields[2])
 
-		present := unifi.isActiveClient(mac)
-		if !present {
+		present, isUnifi := unifi.isActiveClient(mac)
+		if !present && !isUnifi {
 
 			hc := &initialHomeClient{
 				Name:                  name,
@@ -107,42 +112,68 @@ func main() {
 			continue
 		}
 
-		// var macSlice []string
-		// macSlice = append(macSlice, mac)
+		if !isUnifi {
+			// client is active but it's not a Unifi device
+			rc := &refreshClient{
+				Name:       name,
+				FixedIP:    ipaddr,
+				UseFixedip: true,
+				Mac:        mac,
+			}
 
-		// removeC := &removeClient{
-		// 	Cmd:  "forget-sta",
-		// 	Macs: macSlice,
-		// }
-
-		// err = unifi.removeClient(removeC)
-		// if err != nil {
-		// 	log.Fatalf("got error removing client: %v", err)
-		// }
-
-		// hc := &initialHomeClient{
-		// 	Name:                  name,
-		// 	Mac:                   mac,
-		// 	FixedIP:               ipaddr,
-		// 	UseFixedip:            true,
-		// 	LocalDNSRecordEnabled: false,
-		// }
-
-		// err = unifi.initialClientSetup(hc)
-		// if err != nil {
-		// 	log.Fatalf("got error configuring client: %v", err)
-		// }
-
-		rc := &refreshClient{
-			Name:       name,
-			FixedIP:    ipaddr,
-			UseFixedip: true,
-			Mac:        mac,
+			err = unifi.refreshClient(rc)
+			if err != nil {
+				log.Fatalf("got error refreshing client: %v", err)
+			}
+			continue
 		}
 
-		err = unifi.refreshClient(rc)
+		// unifiDevice that is managed
+		ac, err := unifi.clientFromMac(mac)
 		if err != nil {
-			log.Fatalf("got error refreshing client: %v", err)
+			log.Fatalf("did not find Unifi device in activeClient map: %v", err)
+		}
+
+		octets := strings.Split(ipaddr, `.`)
+		octets[3] = "1"
+
+		var gateway string
+		for _, o := range octets {
+			gateway = gateway + o + "."
+		}
+
+		// strip trailing . from gateway
+		gateway = strings.Trim(gateway, `.`)
+
+		// Unifi device is active and present
+		rd := &refreshDevice{
+			id:            ac.ID,
+			Name:          name,
+			MgmtNetworkID: ac.MgmtNetworkID,
+			ConfigNetwork: struct {
+				Type           string `json:"type,omitempty"`
+				IP             string `json:"ip,omitempty"`
+				Netmask        string `json:"netmask,omitempty"`
+				Gateway        string `json:"gateway,omitempty"`
+				DNS1           string `json:"dns1,omitempty"`
+				DNS2           string `json:"dns2,omitempty"`
+				Dnssuffix      string `json:"dnssuffix,omitempty"`
+				BondingEnabled bool   `json:"bonding_enabled,omitempty"`
+			}{
+				Type:           "static",
+				IP:             ipaddr,
+				Netmask:        "255.255.255.0",
+				DNS1:           "8.8.8.8",
+				DNS2:           "",
+				Dnssuffix:      "",
+				BondingEnabled: false,
+				Gateway:        gateway,
+			},
+		}
+
+		err = unifi.refreshDevice(rd)
+		if err != nil {
+			log.Fatalf("failed to refresh Unifi device: %v", err)
 		}
 	}
 
@@ -155,31 +186,37 @@ func main() {
 func isValidLine(s string) bool {
 
 	if !strings.Contains(s, `,`) {
-		// log.Printf("Skipping line %q - did not see comma delimited fields\n", s)
+		log.Printf("Skipping line %q - did not see comma delimited fields\n", s)
 		return false
 	}
 
 	if strings.HasPrefix(s, `#`) {
-		// log.Printf("Skipping line %q - commented out\n", s)
+		log.Printf("Skipping line %q - commented out\n", s)
 		return false
 	}
 
 	fields := strings.Split(s, `,`)
 
+	numFields := len(fields)
+	if numFields <= 2 {
+		log.Printf("Skipping line %q - insufficient number of fields (%d)\n", s, numFields)
+		return false
+
+	}
+
 	if !strings.HasPrefix(fields[2], "192.168") {
-		// log.Printf("Skipping line %q - did not see IP address starting with 192.168\n", s)
+		log.Printf("Skipping line %q - did not see IP address starting with 192.168\n", s)
 		return false
 	}
 
-	numFields := len(fields)
-	if numFields <= 2 {
-		// log.Printf("Skipping line %q - insufficient number of fields (%d)\n", s, numFields)
+	octets := strings.Split(fields[2], `.`)
+	if len(octets) != 4 {
+		log.Printf("malformed IP address: %s", fields[2])
 		return false
-
 	}
 
 	if !strings.Contains(fields[1], `:`) {
-		// log.Printf("skipping line %q - appears to be malformed MAC address (%s)", s, fields[1])
+		log.Printf("skipping line %q - appears to be malformed MAC address (%s)", s, fields[1])
 		return false
 	}
 
