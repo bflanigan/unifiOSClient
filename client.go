@@ -226,12 +226,6 @@ type unifiDevices struct {
 	UnmanagedDevices []any `json:"unmanaged_devices,omitempty"`
 }
 
-// type removeClient struct {
-// 	Macs []string `json:"macs"`
-// 	Cmd  string   `json:"cmd"`
-// 	name string
-// }
-
 type unifiHomeClient []struct {
 	Anomalies   int    `json:"anomalies,omitempty"`
 	AssocTime   int    `json:"assoc_time,omitempty"`
@@ -575,15 +569,6 @@ func (u *unifiClient) refreshDevice(h *refreshDevice) error {
 		return err
 	}
 
-	// var ID string
-	// for _, v := range u.activeClients {
-	// 	if v.MAC == h.Mac {
-	// 		ID = v.ID
-	// 	}
-	// }
-
-	//TODO need to get ID of device
-
 	req, err := http.NewRequest("PUT", fmt.Sprintf("%s/proxy/network/api/s/default/rest/device/%s", u.endpoint, h.id), bytes.NewReader(b))
 	if err != nil {
 		return fmt.Errorf("failed to construct client refresh request: %v", err)
@@ -608,36 +593,3 @@ func (u *unifiClient) refreshDevice(h *refreshDevice) error {
 
 	return nil
 }
-
-// func (u *unifiClient) removeClient(h *removeClient) error {
-
-// 	log.Printf("Removing client with MAC: %s\n", h.Macs[0])
-// 	b, err := json.Marshal(h)
-// 	if err != nil {
-// 		return err
-// 	}
-
-// 	req, err := http.NewRequest("POST", fmt.Sprintf("%s/proxy/network/api/s/default/cmd/stamgr", u.endpoint), bytes.NewReader(b))
-// 	if err != nil {
-// 		return fmt.Errorf("failed to construct client removal request: %v", err)
-// 	}
-// 	u.decorateRequest(req, false)
-
-// 	resp, err := u.client.Do(req)
-// 	if err != nil {
-// 		return fmt.Errorf("got error removing client: %v", err)
-// 	}
-// 	defer resp.Body.Close()
-
-// 	if resp.StatusCode != 200 {
-// 		bodyResponse, err := io.ReadAll(resp.Body)
-// 		if err != nil {
-// 			return err
-// 		}
-
-// 		log.Printf("Failure response body: %v", string(bodyResponse))
-// 		return fmt.Errorf("did not get HTTP 200 removing client")
-// 	}
-
-// 	return nil
-// }

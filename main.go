@@ -112,32 +112,6 @@ func main() {
 			continue
 		}
 
-		// var macSlice []string
-		// macSlice = append(macSlice, mac)
-
-		// removeC := &removeClient{
-		// 	Cmd:  "forget-sta",
-		// 	Macs: macSlice,
-		// }
-
-		// err = unifi.removeClient(removeC)
-		// if err != nil {
-		// 	log.Fatalf("got error removing client: %v", err)
-		// }
-
-		// hc := &initialHomeClient{
-		// 	Name:                  name,
-		// 	Mac:                   mac,
-		// 	FixedIP:               ipaddr,
-		// 	UseFixedip:            true,
-		// 	LocalDNSRecordEnabled: false,
-		// }
-
-		// err = unifi.initialClientSetup(hc)
-		// if err != nil {
-		// 	log.Fatalf("got error configuring client: %v", err)
-		// }
-
 		if !isUnifi {
 			// client is active but it's not a Unifi device
 			rc := &refreshClient{
@@ -225,6 +199,12 @@ func isValidLine(s string) bool {
 
 	if !strings.HasPrefix(fields[2], "192.168") {
 		// log.Printf("Skipping line %q - did not see IP address starting with 192.168\n", s)
+		return false
+	}
+
+	octets := strings.Split(fields[2], `.`)
+	if len(octets) != 4 {
+		// log.Printf("malformed IP address: %s", fields[2])
 		return false
 	}
 
